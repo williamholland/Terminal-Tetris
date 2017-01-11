@@ -17,6 +17,31 @@ import os
 import random
 import sys
 
+import termios
+import fcntl
+
+def getch():
+  fd = sys.stdin.fileno()
+
+  oldterm = termios.tcgetattr(fd)
+  newattr = termios.tcgetattr(fd)
+  newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
+  termios.tcsetattr(fd, termios.TCSANOW, newattr)
+
+  oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
+  fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
+
+  try:
+    while 1:
+      try:
+        c = sys.stdin.read(1)
+        break
+      except IOError: pass
+  finally:
+    termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
+    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
+  return c
+
 from copy import deepcopy
 
 # DECLARE ALL THE CONSTANTS
@@ -469,7 +494,7 @@ def play_game():
     print_board(board, curr_piece, piece_pos)
 
     # Get player move from STDIN
-    player_move = raw_input()
+    player_move = getch()
     while (not is_game_over(board, curr_piece, piece_pos)):
         ERR_MSG = ""
         do_move_down = False
@@ -519,7 +544,7 @@ def play_game():
         print_board(board, curr_piece, piece_pos, error_message=ERR_MSG)
 
         # Get player move from STDIN
-        player_move = raw_input()
+        player_move = getch()
 
     print "GAME OVER!"
 
