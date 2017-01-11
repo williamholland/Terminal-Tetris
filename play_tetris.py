@@ -559,32 +559,26 @@ def play_game():
                 piece_pos = get_left_move(piece_pos)
                 do_move_down = True
             else:
-                ERR_MSG = "Cannot move left!"
+                do_move_down = True
         elif player_move == MOVE_RIGHT:
             if can_move_right(board, curr_piece, piece_pos):
                 piece_pos = get_right_move(piece_pos)
                 do_move_down = True
             else:
-                ERR_MSG = "Cannot move right!"
+                do_move_down = True
         elif player_move == ROTATE_ANTICLOCKWISE:
             if can_rotate_anticlockwise(board, curr_piece, piece_pos):
                 curr_piece = rotate_anticlockwise(curr_piece)
                 do_move_down = True
-            else:
-                ERR_MSG = "Cannot rotate anti-clockwise !"
         elif player_move == ROTATE_CLOCKWISE:
             if can_rotate_clockwise(board, curr_piece, piece_pos):
                 curr_piece = rotate_clockwise(curr_piece)
                 do_move_down = True
-            else:
-                ERR_MSG = "Cannot rotate clockwise!"
         elif player_move == NO_MOVE:
             do_move_down = True
         elif player_move == QUIT_GAME:
             print "Bye. Thank you for playing!"
             sys.exit(0)
-        else:
-            ERR_MSG = "That is not a valid move!"
 
         if do_move_down and can_move_down(board, curr_piece, piece_pos):
             piece_pos = get_down_move(piece_pos)
