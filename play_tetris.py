@@ -20,6 +20,59 @@ import sys
 import termios
 import fcntl
 
+class colours:
+    black = '\033[91m'
+    red = '\033[91m'
+    green = '\033[92m'
+    yellow = '\033[93m'
+    dark_yellow = '\033[0;33m'
+    blue = '\033[94m'
+    magenta = '\033[95m'
+    cyan = '\033[96m'
+    white = '\033[97m'
+    ENDC = '\033[0m'
+
+class Air():
+    char = " "
+
+    def __nonzero__(self):
+        return False
+
+    def __str__(self):
+        return "Air"
+
+    def string(self):
+        return self.char
+
+class Solid():
+    char = u"\u2588".encode('utf-8')
+
+    def __nonzero__(self):
+        return True
+
+    def __str__(self):
+        return "Solid"
+
+    def string(self):
+        return self.char
+
+class Edge(Solid):
+    char = u"\u2588".encode('utf-8')
+
+    def __str__(self):
+        return "Edge"
+
+class Tile(Solid):
+
+    def __init__(self,colour):
+        self.colour = colour
+
+    def __str__(self):
+        return "Tile"
+
+    def string(self):
+        return self.colour+self.char+colours.ENDC
+
 def getch():
   fd = sys.stdin.fileno()
 
@@ -49,24 +102,42 @@ BOARD_SIZE = 20
 # Extra two are for the walls, playing area will have size as BOARD_SIZE
 EFF_BOARD_SIZE = BOARD_SIZE + 2
 
+r = Tile(colours.red)
+g = Tile(colours.green)
+y = Tile(colours.yellow)
+b = Tile(colours.blue)
+m = Tile(colours.magenta)
+c = Tile(colours.cyan)
+o = Tile(colours.dark_yellow)
+
+a = Air()
+
 PIECES = [
 
-    [[1], [1], [1], [1]],
+    [[c], [c], [c], [c]],
 
-    [[1, 0],
-     [1, 0],
-     [1, 1]],
+    [[o, a],
+     [o, a],
+     [o, o]],
 
-    [[0, 1],
-     [0, 1],
-     [1, 1]],
+    [[a, b],
+     [a, b],
+     [b, b]],
 
-    [[0, 1],
-     [1, 1],
-     [1, 0]],
+    [[a, r],
+     [r, r],
+     [r, a]],
 
-    [[1, 1],
-     [1, 1]]
+    [[g, a],
+     [g, g],
+     [a, g]],
+
+    [[m, a],
+     [m, m],
+     [m, a]],
+
+    [[y, y],
+     [y, y]]
 
 ]
 
@@ -94,40 +165,25 @@ def print_board(board, curr_piece, piece_pos, error_message=''):
     If there are any error messages then prints them to STDOUT as well
     """
     os.system('cls' if os.name=='nt' else 'clear')
-    print "Text mode version of the TETRIS game\n\n"
 
     board_copy = deepcopy(board)
     curr_piece_size_x = len(curr_piece)
     curr_piece_size_y = len(curr_piece[0])
     for i in xrange(curr_piece_size_x):
         for j in xrange(curr_piece_size_y):
-            board_copy[piece_pos[0]+i][piece_pos[1]+j] = curr_piece[i][j] | board[piece_pos[0]+i][piece_pos[1]+j]
+            if curr_piece[i][j]:
+                board_copy[piece_pos[0]+i][piece_pos[1]+j] = curr_piece[i][j]
+            else:
+                board_copy[piece_pos[0]+i][piece_pos[1]+j] = board[piece_pos[0]+i][piece_pos[1]+j]
 
     # Print the board to STDOUT
     for i in xrange(EFF_BOARD_SIZE):
         for j in xrange(EFF_BOARD_SIZE):
-            if board_copy[i][j] == 1:
-                print "*",
-            else:
-                print " ",
+            print board_copy[i][j].string(),
         print ""
-
-    print "Quick play instructions:\n"
-    print " - a (return): move piece left"
-    print " - d (return): move piece right"
-    print " - w (return): rotate piece counter clockwise"
-    print " - s (return): rotate piece clockwise"
-
-    # In case user doesn't want to alter the position of the piece
-    # and he doesn't want to rotate the piece either and just wants to move
-    # in the downward direction, he can choose 'f'
-    print " - e (return): just move the piece downwards as is"
-    print " - q (return): to quit the game anytime"
 
     if error_message:
         print error_message
-    print "Your move:",
-
 
 def init_board():
     """
@@ -139,13 +195,13 @@ def init_board():
     --------
     board - the matrix with the walls of the gameplay
     """
-    board = [[0 for x in xrange(EFF_BOARD_SIZE)] for y in xrange(EFF_BOARD_SIZE)]
+    board = [[Air() for x in xrange(EFF_BOARD_SIZE)] for y in xrange(EFF_BOARD_SIZE)]
     for i in xrange(EFF_BOARD_SIZE):
-        board[i][0] = 1
+        board[i][0] = Edge()
     for i in xrange(EFF_BOARD_SIZE):
-        board[EFF_BOARD_SIZE-1][i] = 1
+        board[EFF_BOARD_SIZE-1][i] = Edge()
     for i in xrange(EFF_BOARD_SIZE):
-        board[i][EFF_BOARD_SIZE-1] = 1
+        board[i][EFF_BOARD_SIZE-1] = Edge()
     return board
 
 
@@ -314,31 +370,31 @@ def merge_board_and_piece(board, curr_piece, piece_pos):
     curr_piece_size_y = len(curr_piece[0])
     for i in xrange(curr_piece_size_x):
         for j in xrange(curr_piece_size_y):
-            board[piece_pos[0]+i][piece_pos[1]+j] = curr_piece[i][j] | board[piece_pos[0]+i][piece_pos[1]+j]
+            if curr_piece[i][j]:
+                board[piece_pos[0]+i][piece_pos[1]+j] = curr_piece[i][j]
+            else:
+                board[piece_pos[0]+i][piece_pos[1]+j] = board[piece_pos[0]+i][piece_pos[1]+j]
 
     # After merging the board and piece
     # If there are rows which are completely filled then remove those rows
 
     # Declare empty row to add later
-    empty_row = [0]*EFF_BOARD_SIZE
-    empty_row[0] = 1
-    empty_row[EFF_BOARD_SIZE-1] = 1
+    empty_row = [Air() for _ in range(EFF_BOARD_SIZE)]
+    empty_row[0] = Edge()
+    empty_row[EFF_BOARD_SIZE-1] = Edge()
 
     # Declare a constant row that is completely filled
     filled_row = [1]*EFF_BOARD_SIZE
 
+    def filled(row):
+        return all(row) and not all([isinstance(x, Edge) for x in row])
+
     # Count the total filled rows in the board
     filled_rows = 0
     for row in board:
-        if row == filled_row:
+        if filled(row):
             filled_rows += 1
-
-    # The last row is always a filled row because it is the boundary
-    # So decrease the count for that one
-    filled_rows -= 1
-
-    for i in xrange(filled_rows):
-        board.remove(filled_row)
+            board.remove(row)
 
     # Add extra empty rows on the top of the board to compensate for deleted rows
     for i in xrange(filled_rows):
@@ -363,7 +419,7 @@ def overlap_check(board, curr_piece, piece_pos):
     curr_piece_size_y = len(curr_piece[0])
     for i in xrange(curr_piece_size_x):
         for j in xrange(curr_piece_size_y):
-            if board[piece_pos[0]+i][piece_pos[1]+j] == 1 and curr_piece[i][j] == 1:
+            if isinstance(board[piece_pos[0]+i][piece_pos[1]+j],Solid) == 1 and isinstance(curr_piece[i][j],Solid):
                 return False
     return True
 
