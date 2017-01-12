@@ -16,6 +16,10 @@ Quick play instructions:
 # TODO peice object
 # TODO background colours - need to be continuous blocks
 
+def game_over():
+    print "Game over."
+    exit(0)
+
 logfile = open("tetris-log.txt","w")
 def log(msg):
     logfile.write(str(msg)+"\n")
@@ -144,6 +148,8 @@ class Piece(list):
         return self.col, self.row
 
     def merge_board_and_piece(self, board):
+        if self.row == 0:
+            game_over()
         for row in range(self.height()):
             for col in range(self.width()):
                 board[self.row+row][self.col+col] = self[row][col] or board[self.row+row][self.col+col]
@@ -342,13 +348,6 @@ def get_random_piece():
     return Piece(random.choice(PIECES))
 
 
-def is_game_over(board, curr_piece):
-    # TODO
-    return False
-
-
-
-
 def play_game():
 
     """
@@ -382,7 +381,7 @@ def play_game():
 
     # Get player move from STDIN
     player_move = getch()
-    while (not is_game_over(board, curr_piece)):
+    while True:
 
         ERR_MSG = ""
 
@@ -407,8 +406,6 @@ def play_game():
 
         # Get player move from STDIN
         player_move = getch()
-
-    print "GAME OVER!"
 
 if __name__ == "__main__":
     play_game()
