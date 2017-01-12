@@ -91,9 +91,8 @@ def getch():
   return c
 
 # DECLARE ALL THE CONSTANTS
-BOARD_SIZE = 20
-# Extra two are for the walls, playing area will have size as BOARD_SIZE
-EFF_BOARD_SIZE = BOARD_SIZE + 2
+BOARD_WIDTH = 12
+BOARD_HEIGHT = 22
 
 r = Tile(colours.red)
 g = Tile(colours.green)
@@ -124,7 +123,7 @@ class Piece(list):
     def get_random_position(self):
 
         self.row = 0
-        self.col = random.randrange(1, EFF_BOARD_SIZE-self.width())
+        self.col = random.randrange(1, BOARD_WIDTH-self.width())
 
     def position(self):
         return self.col, self.row
@@ -142,12 +141,12 @@ class Piece(list):
         # If there are rows which are completely filled then remove those rows
 
         # Declare empty row to add later
-        empty_row = [Air() for _ in range(EFF_BOARD_SIZE)]
+        empty_row = [Air() for _ in range(BOARD_WIDTH)]
         empty_row[0] = Edge()
-        empty_row[EFF_BOARD_SIZE-1] = Edge()
+        empty_row[BOARD_WIDTH-1] = Edge()
 
         # Declare a constant row that is completely filled
-        filled_row = [1]*EFF_BOARD_SIZE
+        filled_row = [1]*BOARD_WIDTH
 
         def filled(row):
             return all(row) and not all([isinstance(x, Edge) for x in row])
@@ -281,13 +280,12 @@ class Board(list):
             print ""
 
     def __init__(self):
-        board = [[Air() for x in range(EFF_BOARD_SIZE)] for y in range(EFF_BOARD_SIZE)]
-        for i in range(EFF_BOARD_SIZE):
+        board = [[Air() for x in range(BOARD_WIDTH)] for y in range(BOARD_HEIGHT)]
+        for i in range(BOARD_HEIGHT):
             board[i][0] = Edge()
-        for i in range(EFF_BOARD_SIZE):
-            board[EFF_BOARD_SIZE-1][i] = Edge()
-        for i in range(EFF_BOARD_SIZE):
-            board[i][EFF_BOARD_SIZE-1] = Edge()
+            board[i][BOARD_WIDTH-1] = Edge()
+        for i in range(BOARD_WIDTH):
+            board[BOARD_HEIGHT-1][i] = Edge()
 
         for row in board:
             self.append(row)
@@ -323,7 +321,6 @@ def play_game():
         elif player_move == ROTATE_CLOCKWISE:
             curr_piece.rotate(1, board)
         elif player_move == QUIT_GAME:
-            print "Bye. Thank you for playing!"
             sys.exit(0)
 
         if not curr_piece.move_down(board):
