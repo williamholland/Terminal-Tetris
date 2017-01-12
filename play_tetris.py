@@ -280,71 +280,44 @@ ROTATE_CLOCKWISE = 'e'
 NO_MOVE = 's'
 QUIT_GAME = 'q'
 
+class Board(list):
 
-def print_board(board, curr_piece, error_message=''):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
+    def draw(self, curr_piece):
+        os.system('cls' if os.name=='nt' else 'clear')
+        
+        import copy
+        to_print = copy.deepcopy(self)
 
-    Details:
-    --------
-    Prints out the board, piece and playing instructions to STDOUT
-    If there are any error messages then prints them to STDOUT as well
-    """
-    os.system('cls' if os.name=='nt' else 'clear')
+        for row in range(curr_piece.height()):
+            for col in range(curr_piece.width()):
+                if curr_piece[row][col]:
+                   to_print[curr_piece.row+row][curr_piece.col+col] = curr_piece[row][col]
 
-    board_copy = deepcopy(board)
+        for row in to_print:
+            for cell in row:
+                print cell.string(),
+            print ""
 
-    for row in range(curr_piece.height()):
-        for col in range(curr_piece.width()):
-            if curr_piece[row][col]:
-                board_copy[curr_piece.row+row][curr_piece.col+col] = curr_piece[row][col]
-            else:
-                board_copy[curr_piece.row+row][curr_piece.col+col] = board[curr_piece.row+row][curr_piece.col+col]
+    def __init__(self):
+        board = [[Air() for x in range(EFF_BOARD_SIZE)] for y in range(EFF_BOARD_SIZE)]
+        for i in range(EFF_BOARD_SIZE):
+            board[i][0] = Edge()
+        for i in range(EFF_BOARD_SIZE):
+            board[EFF_BOARD_SIZE-1][i] = Edge()
+        for i in range(EFF_BOARD_SIZE):
+            board[i][EFF_BOARD_SIZE-1] = Edge()
 
-    # Print the board to STDOUT
-    for i in range(EFF_BOARD_SIZE):
-        for j in range(EFF_BOARD_SIZE):
-            print board_copy[i][j].string(),
-        print ""
+        for row in board:
+            self.append(row)
 
-    if error_message:
-        print error_message
+    def height(self):
+        return len(self)
 
-def init_board():
-    """
-    Parameters:
-    -----------
-    None
-
-    Returns:
-    --------
-    board - the matrix with the walls of the gameplay
-    """
-    board = [[Air() for x in range(EFF_BOARD_SIZE)] for y in range(EFF_BOARD_SIZE)]
-    for i in range(EFF_BOARD_SIZE):
-        board[i][0] = Edge()
-    for i in range(EFF_BOARD_SIZE):
-        board[EFF_BOARD_SIZE-1][i] = Edge()
-    for i in range(EFF_BOARD_SIZE):
-        board[i][EFF_BOARD_SIZE-1] = Edge()
-    return board
+    def width(self):
+        return len(self[0])
 
 
 def get_random_piece():
-    """
-    Parameters:
-    -----------
-    None
-
-    Returns:
-    --------
-    piece - a random piece from the PIECES constant declared above
-    """
     return Piece(random.choice(PIECES))
 
 
@@ -374,16 +347,14 @@ def play_game():
     """
 
     # Initialize the game board, piece and piece position
-    board = init_board()
+    board = Board()
     curr_piece = get_random_piece()
     piece_pos = curr_piece.position()
-    print_board(board, curr_piece)
+    board.draw(curr_piece)
 
     # Get player move from STDIN
     player_move = getch()
     while True:
-
-        ERR_MSG = ""
 
         if player_move == MOVE_LEFT:
             curr_piece.move_left(board)
@@ -402,7 +373,7 @@ def play_game():
             curr_piece = get_random_piece()
 
         # Redraw board
-        print_board(board, curr_piece, error_message=ERR_MSG)
+        board.draw(curr_piece)
 
         # Get player move from STDIN
         player_move = getch()
