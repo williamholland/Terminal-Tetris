@@ -5,13 +5,20 @@ Python implementation of text-mode version of the Tetris game
 
 Quick play instructions:
 
- - a (return): move piece left
- - d (return): move piece right
- - w (return): rotate piece counter clockwise
- - s (return): rotate piece clockwise
- - e (return): just move the piece downwards as is
+ - a: move piece left
+ - d: move piece right
+ - w: rotate piece counter clockwise
+ - s: rotate piece clockwise
+ - e: just move the piece downwards as is
 
 """
+
+# TODO peice object
+# TODO background colours - need to be continuous blocks
+
+logfile = open("tetris-log.txt","w")
+def log(msg):
+    logfile.write(str(msg)+"\n")
 
 import os
 import random
@@ -112,34 +119,152 @@ o = Tile(colours.dark_yellow)
 
 a = Air()
 
-PIECES = [
+class Tetrimino(list):
 
-    [[c], [c], [c], [c]],
+    def __init__(self, colour, shape):
 
-    [[o, a],
-     [o, a],
-     [o, o]],
+        self.colour = colour
 
-    [[a, b],
-     [a, b],
-     [b, b]],
+        for i in [[col for col in row] for row in shape]:
+            self.append(i)
 
-    [[a, r],
-     [r, r],
-     [r, a]],
+class Piece(list):
 
-    [[g, a],
-     [g, g],
-     [a, g]],
+    def tilize(self, val):
+        if val:
+            return Tile(self.colour)
+        return Air()
 
-    [[m, a],
-     [m, m],
-     [m, a]],
+    def get_random_position(self):
 
-    [[y, y],
-     [y, y]]
+        self.row = 0
+        self.col = random.randrange(1, EFF_BOARD_SIZE-self.width())
 
-]
+    def position(self):
+        return self.col, self.row
+
+    def merge_board_and_piece(self, board):
+        for row in range(self.height()):
+            for col in range(self.width()):
+                board[self.row+row][self.col+col] = self[row][col] or board[self.row+row][self.col+col]
+
+        # TODO put this in a board object method
+
+        # After merging the board and piece
+        # If there are rows which are completely filled then remove those rows
+
+        # Declare empty row to add later
+        empty_row = [Air() for _ in range(EFF_BOARD_SIZE)]
+        empty_row[0] = Edge()
+        empty_row[EFF_BOARD_SIZE-1] = Edge()
+
+        # Declare a constant row that is completely filled
+        filled_row = [1]*EFF_BOARD_SIZE
+
+        def filled(row):
+            return all(row) and not all([isinstance(x, Edge) for x in row])
+
+        # Count the total filled rows in the board
+        filled_rows = 0
+        for row in board:
+            if filled(row):
+                filled_rows += 1
+                board.remove(row)
+
+        # Add extra empty rows on the top of the board to compensate for deleted rows
+        for i in range(filled_rows):
+            board.insert(0, empty_row)
+
+    def overlap_check(self, board):
+        for row in range(self.height()):
+            for col in range(self.width()):
+                if isinstance(board[self.row+row][self.col+col],Solid) and isinstance(self[row][col],Solid):
+                    return False
+        return True
+
+    def move_left(self, board):
+        self.col -= 1
+        if not self.overlap_check(board):
+            self.col += 1
+
+    def move_right(self, board):
+        self.col += 1
+        if not self.overlap_check(board):
+            self.col -= 1
+
+    def move_down(self, board):
+        self.row += 1
+        if not self.overlap_check(board):
+            self.row -= 1
+            self.merge_board_and_piece(board)
+            return False
+        return True
+
+    def rotate_clockwise(self):
+        rows = []
+
+        while self:
+            rows.append(self.pop())
+
+        for row in zip(*rows):
+            self.append(row)
+
+    def rotate(self, n, board):
+        n = n % 4
+        for _ in range(n):
+            self.rotate_clockwise()
+        if not self.overlap_check(board):
+            for _ in range(4-n):
+                self.rotate_clockwise()
+
+    def __init__(self, tetrimino):
+
+        self.colour = tetrimino.colour
+
+        for i in [[self.tilize(col) for col in row] for row in tetrimino]:
+            self.append(i)
+
+        self.get_random_position()
+
+    def width(self):
+        return len(self[0])
+
+    def height(self):
+        return len(self)
+
+I = Tetrimino(colours.cyan,
+        [[1], [1], [1], [1]])
+
+J = Tetrimino(colours.blue,
+    [[0, 1],
+     [0, 1],
+     [1, 1]])
+
+L = Tetrimino(colours.dark_yellow,
+    [[1, 0],
+     [1, 0],
+     [1, 1]])
+
+O = Tetrimino(colours.yellow,
+    [[1, 1],
+     [1, 1]])
+
+S = Tetrimino(colours.green,
+    [[1, 0],
+     [1, 1],
+     [0, 1]])
+
+T = Tetrimino(colours.magenta,
+    [[1, 0],
+     [1, 1],
+     [1, 0]])
+
+Z = Tetrimino(colours.red,
+    [[0, 1],
+     [1, 1],
+     [1, 0]])
+
+PIECES = [I,J,L,O,S,T,Z]
 
 # Constants for user input
 MOVE_LEFT = 'a'
@@ -150,7 +275,7 @@ NO_MOVE = 's'
 QUIT_GAME = 'q'
 
 
-def print_board(board, curr_piece, piece_pos, error_message=''):
+def print_board(board, curr_piece, error_message=''):
     """
     Parameters:
     -----------
@@ -167,18 +292,17 @@ def print_board(board, curr_piece, piece_pos, error_message=''):
     os.system('cls' if os.name=='nt' else 'clear')
 
     board_copy = deepcopy(board)
-    curr_piece_size_x = len(curr_piece)
-    curr_piece_size_y = len(curr_piece[0])
-    for i in xrange(curr_piece_size_x):
-        for j in xrange(curr_piece_size_y):
-            if curr_piece[i][j]:
-                board_copy[piece_pos[0]+i][piece_pos[1]+j] = curr_piece[i][j]
+
+    for row in range(curr_piece.height()):
+        for col in range(curr_piece.width()):
+            if curr_piece[row][col]:
+                board_copy[curr_piece.row+row][curr_piece.col+col] = curr_piece[row][col]
             else:
-                board_copy[piece_pos[0]+i][piece_pos[1]+j] = board[piece_pos[0]+i][piece_pos[1]+j]
+                board_copy[curr_piece.row+row][curr_piece.col+col] = board[curr_piece.row+row][curr_piece.col+col]
 
     # Print the board to STDOUT
-    for i in xrange(EFF_BOARD_SIZE):
-        for j in xrange(EFF_BOARD_SIZE):
+    for i in range(EFF_BOARD_SIZE):
+        for j in range(EFF_BOARD_SIZE):
             print board_copy[i][j].string(),
         print ""
 
@@ -195,12 +319,12 @@ def init_board():
     --------
     board - the matrix with the walls of the gameplay
     """
-    board = [[Air() for x in xrange(EFF_BOARD_SIZE)] for y in xrange(EFF_BOARD_SIZE)]
-    for i in xrange(EFF_BOARD_SIZE):
+    board = [[Air() for x in range(EFF_BOARD_SIZE)] for y in range(EFF_BOARD_SIZE)]
+    for i in range(EFF_BOARD_SIZE):
         board[i][0] = Edge()
-    for i in xrange(EFF_BOARD_SIZE):
+    for i in range(EFF_BOARD_SIZE):
         board[EFF_BOARD_SIZE-1][i] = Edge()
-    for i in xrange(EFF_BOARD_SIZE):
+    for i in range(EFF_BOARD_SIZE):
         board[i][EFF_BOARD_SIZE-1] = Edge()
     return board
 
@@ -215,307 +339,14 @@ def get_random_piece():
     --------
     piece - a random piece from the PIECES constant declared above
     """
-    idx = random.randrange(len(PIECES))
-    return PIECES[idx]
+    return Piece(random.choice(PIECES))
 
 
-def get_random_position(curr_piece):
-    """
-    Parameters:
-    -----------
-    curr_piece - piece which is alive in the game at the moment
-
-    Returns:
-    --------
-    piece_pos - a randomly (along x-axis) chosen position for this piece
-    """
-    curr_piece_size = len(curr_piece)
-
-    # This x refers to rows, rows go along y-axis
-    x = 0
-    # This y refers to columns, columns go along x-axis
-    y = random.randrange(1, EFF_BOARD_SIZE-curr_piece_size)
-    return [x, y]
-
-
-def is_game_over(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-    Returns:
-    --------
-    True - if game is over
-    False - if game is live and player can still move
-    """
-    # If the piece cannot move down and the position is still the first row
-    # of the board then the game has ended
-    if not can_move_down(board, curr_piece, piece_pos) and piece_pos[0] == 0:
-        return True
+def is_game_over(board, curr_piece):
+    # TODO
     return False
 
 
-def get_left_move(piece_pos):
-    """
-    Parameters:
-    -----------
-    piece_pos - position of piece on the board
-
-    Returns:
-    --------
-    piece_pos - new position of the piece shifted to the left
-    """
-    # Shift the piece left by 1 unit
-    new_piece_pos = [piece_pos[0], piece_pos[1] - 1]
-    return new_piece_pos
-
-
-def get_right_move(piece_pos):
-    """
-    Parameters:
-    -----------
-    piece_pos - position of piece on the board
-
-    Returns:
-    --------
-    piece_pos - new position of the piece shifted to the right
-    """
-    # Shift the piece right by 1 unit
-    new_piece_pos = [piece_pos[0], piece_pos[1] + 1]
-    return new_piece_pos
-
-
-def get_down_move(piece_pos):
-    """
-    Parameters:
-    -----------
-    piece_pos - position of piece on the board
-
-    Returns:
-    --------
-    piece_pos - new position of the piece shifted downward
-    """
-    # Shift the piece down by 1 unit
-    new_piece_pos = [piece_pos[0] + 1, piece_pos[1]]
-    return new_piece_pos
-
-
-def rotate_clockwise(piece):
-    """
-    Paramertes:
-    -----------
-    piece - matrix of the piece to rotate
-
-    Returns:
-    --------
-    piece - Clockwise rotated piece
-
-    Details:
-    --------
-    We first reverse all the sub lists and then zip all the sublists
-    This will give us a clockwise rotated matrix
-    """
-    piece_copy = deepcopy(piece)
-    reverse_piece = piece_copy[::-1]
-    return list(list(elem) for elem in zip(*reverse_piece))
-
-
-def rotate_anticlockwise(piece):
-    """
-    Paramertes:
-    -----------
-    piece - matrix of the piece to rotate
-
-    Returns:
-    --------
-    Anti-clockwise rotated piece
-
-    Details:
-    --------
-    If we rotate any piece in clockwise direction for 3 times, we would eventually
-    get the piece rotated in anti clockwise direction
-    """
-    piece_copy = deepcopy(piece)
-    # Rotating clockwise thrice will be same as rotating anticlockwise :)
-    piece_1 = rotate_clockwise(piece_copy)
-    piece_2 = rotate_clockwise(piece_1)
-    return rotate_clockwise(piece_2)
-
-
-def merge_board_and_piece(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    None
-
-    Details:
-    --------
-    Fixes the position of the passed piece at piece_pos in the board
-    This means that the new piece will now come into the play
-
-    We also remove any filled up rows from the board to continue the gameplay
-    as it happends in a tetris game
-    """
-    curr_piece_size_x = len(curr_piece)
-    curr_piece_size_y = len(curr_piece[0])
-    for i in xrange(curr_piece_size_x):
-        for j in xrange(curr_piece_size_y):
-            if curr_piece[i][j]:
-                board[piece_pos[0]+i][piece_pos[1]+j] = curr_piece[i][j]
-            else:
-                board[piece_pos[0]+i][piece_pos[1]+j] = board[piece_pos[0]+i][piece_pos[1]+j]
-
-    # After merging the board and piece
-    # If there are rows which are completely filled then remove those rows
-
-    # Declare empty row to add later
-    empty_row = [Air() for _ in range(EFF_BOARD_SIZE)]
-    empty_row[0] = Edge()
-    empty_row[EFF_BOARD_SIZE-1] = Edge()
-
-    # Declare a constant row that is completely filled
-    filled_row = [1]*EFF_BOARD_SIZE
-
-    def filled(row):
-        return all(row) and not all([isinstance(x, Edge) for x in row])
-
-    # Count the total filled rows in the board
-    filled_rows = 0
-    for row in board:
-        if filled(row):
-            filled_rows += 1
-            board.remove(row)
-
-    # Add extra empty rows on the top of the board to compensate for deleted rows
-    for i in xrange(filled_rows):
-        board.insert(0, empty_row)
-
-
-def overlap_check(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    True - if piece do not overlap with any other piece or walls
-    False - if piece overlaps with any other piece or board walls
-    """
-    curr_piece_size_x = len(curr_piece)
-    curr_piece_size_y = len(curr_piece[0])
-    for i in xrange(curr_piece_size_x):
-        for j in xrange(curr_piece_size_y):
-            if isinstance(board[piece_pos[0]+i][piece_pos[1]+j],Solid) == 1 and isinstance(curr_piece[i][j],Solid):
-                return False
-    return True
-
-
-def can_move_left(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    True - if we can move the piece left
-    False - if we cannot move the piece to the left,
-            means it will overlap if we move it to the left
-    """
-    piece_pos = get_left_move(piece_pos)
-    return overlap_check(board, curr_piece, piece_pos)
-
-
-def can_move_right(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    True - if we can move the piece left
-    False - if we cannot move the piece to the right,
-            means it will overlap if we move it to the right
-    """
-    piece_pos = get_right_move(piece_pos)
-    return overlap_check(board, curr_piece, piece_pos)
-
-
-def can_move_down(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    True - if we can move the piece downwards
-    False - if we cannot move the piece to the downward direction
-    """
-    piece_pos = get_down_move(piece_pos)
-    return overlap_check(board, curr_piece, piece_pos)
-
-
-def can_rotate_anticlockwise(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    True - if we can move the piece anti-clockwise
-    False - if we cannot move the piece to anti-clockwise
-            might happen in case rotating would overlap with any existing piece
-    """
-    curr_piece = rotate_anticlockwise(curr_piece)
-    return overlap_check(board, curr_piece, piece_pos)
-
-
-def can_rotate_clockwise(board, curr_piece, piece_pos):
-    """
-    Parameters:
-    -----------
-    board - matrix of the size of the board
-    curr_piece - matrix for the piece active in the game
-    piece_pos - [x,y] co-ordinates of the top-left cell in the piece matrix
-                w.r.t. the board
-
-    Returns:
-    --------
-    True - if we can move the piece clockwise
-    False - if we cannot move the piece to clockwise
-            might happen in case rotating would overlap with any existing piece
-    """
-    curr_piece = rotate_clockwise(curr_piece)
-    return overlap_check(board, curr_piece, piece_pos)
 
 
 def play_game():
@@ -546,52 +377,33 @@ def play_game():
     # Initialize the game board, piece and piece position
     board = init_board()
     curr_piece = get_random_piece()
-    piece_pos = get_random_position(curr_piece)
-    print_board(board, curr_piece, piece_pos)
+    piece_pos = curr_piece.position()
+    print_board(board, curr_piece)
 
     # Get player move from STDIN
     player_move = getch()
-    while (not is_game_over(board, curr_piece, piece_pos)):
+    while (not is_game_over(board, curr_piece)):
+
         ERR_MSG = ""
-        do_move_down = False
+
         if player_move == MOVE_LEFT:
-            if can_move_left(board, curr_piece, piece_pos):
-                piece_pos = get_left_move(piece_pos)
-                do_move_down = True
-            else:
-                do_move_down = True
+            curr_piece.move_left(board)
         elif player_move == MOVE_RIGHT:
-            if can_move_right(board, curr_piece, piece_pos):
-                piece_pos = get_right_move(piece_pos)
-                do_move_down = True
-            else:
-                do_move_down = True
+            curr_piece.move_right(board)
         elif player_move == ROTATE_ANTICLOCKWISE:
-            if can_rotate_anticlockwise(board, curr_piece, piece_pos):
-                curr_piece = rotate_anticlockwise(curr_piece)
-                do_move_down = True
+            curr_piece.rotate(3, board)
         elif player_move == ROTATE_CLOCKWISE:
-            if can_rotate_clockwise(board, curr_piece, piece_pos):
-                curr_piece = rotate_clockwise(curr_piece)
-                do_move_down = True
-        elif player_move == NO_MOVE:
-            do_move_down = True
+            curr_piece.rotate(1, board)
         elif player_move == QUIT_GAME:
             print "Bye. Thank you for playing!"
             sys.exit(0)
 
-        if do_move_down and can_move_down(board, curr_piece, piece_pos):
-            piece_pos = get_down_move(piece_pos)
-
-        # This means the current piece in the game cannot be moved
-        # We have to fix this piece in the board and generate a new piece
-        if not can_move_down(board, curr_piece, piece_pos):
-            merge_board_and_piece(board, curr_piece, piece_pos)
+        if not curr_piece.move_down(board):
+            del curr_piece
             curr_piece = get_random_piece()
-            piece_pos = get_random_position(curr_piece)
 
         # Redraw board
-        print_board(board, curr_piece, piece_pos, error_message=ERR_MSG)
+        print_board(board, curr_piece, error_message=ERR_MSG)
 
         # Get player move from STDIN
         player_move = getch()
