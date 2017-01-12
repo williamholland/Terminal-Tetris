@@ -1,21 +1,5 @@
 #!/usr/bin/python
 
-"""
-Python implementation of text-mode version of the Tetris game
-
-Quick play instructions:
-
- - a: move piece left
- - d: move piece right
- - w: rotate piece counter clockwise
- - s: rotate piece clockwise
- - e: just move the piece downwards as is
-
-"""
-
-# TODO peice object
-# TODO background colours - need to be continuous blocks
-
 def game_over():
     print "Game over."
     exit(0)
@@ -105,8 +89,6 @@ def getch():
     termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
     fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
   return c
-
-from copy import deepcopy
 
 # DECLARE ALL THE CONSTANTS
 BOARD_SIZE = 20
@@ -322,30 +304,6 @@ def get_random_piece():
 
 
 def play_game():
-
-    """
-    Parameters:
-    -----------
-    None
-
-    Returns:
-    --------
-    None
-
-    Details:
-    --------
-    - Initializes the game
-    - Reads player move from the STDIN
-    - Checks for the move validity
-    - Continues the gameplay if valid move, else prints out error msg
-      without changing the board
-    - Fixes the piece position on board if it cannot be moved
-    - Pops in new piece on top of the board
-    - Quits if no valid moves and possible for a new piece
-    - Quits in case user wants to quit
-
-    """
-
     # Initialize the game board, piece and piece position
     board = Board()
     curr_piece = get_random_piece()
