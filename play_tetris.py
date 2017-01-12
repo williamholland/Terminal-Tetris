@@ -254,12 +254,12 @@ Z = Tetrimino(colours.red,
 PIECES = [I,J,L,O,S,T,Z]
 
 # Constants for user input
-MOVE_LEFT = 'a'
-MOVE_RIGHT = 'd'
-ROTATE_ANTICLOCKWISE = 'w'
-ROTATE_CLOCKWISE = 'e'
-NO_MOVE = 's'
-QUIT_GAME = 'q'
+MOVE_LEFT = ['a', 'h']
+MOVE_RIGHT = ['d', 'l']
+ROTATE_ANTICLOCKWISE = ['w', ' ']
+ROTATE_CLOCKWISE = ['e', 'k', 'i']
+NO_MOVE = ['s', 'j']
+QUIT_GAME = ['q']
 
 class Board(list):
 
@@ -312,15 +312,15 @@ def play_game():
     player_move = getch()
     while True:
 
-        if player_move == MOVE_LEFT:
+        if player_move in MOVE_LEFT:
             curr_piece.move_left(board)
-        elif player_move == MOVE_RIGHT:
+        elif player_move in MOVE_RIGHT:
             curr_piece.move_right(board)
-        elif player_move == ROTATE_ANTICLOCKWISE:
+        elif player_move in ROTATE_ANTICLOCKWISE:
             curr_piece.rotate(3, board)
-        elif player_move == ROTATE_CLOCKWISE:
+        elif player_move in ROTATE_CLOCKWISE:
             curr_piece.rotate(1, board)
-        elif player_move == QUIT_GAME:
+        elif player_move in QUIT_GAME:
             sys.exit(0)
 
         if not curr_piece.move_down(board):
