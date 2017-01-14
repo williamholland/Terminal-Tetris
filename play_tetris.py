@@ -128,39 +128,6 @@ class Piece(list):
     def position(self):
         return self.col, self.row
 
-    def merge_board_and_piece(self, board):
-        if self.row == 0:
-            game_over()
-        for row in range(self.height()):
-            for col in range(self.width()):
-                board[self.row+row][self.col+col] = self[row][col] or board[self.row+row][self.col+col]
-
-        # TODO put this in a board object method
-
-        # After merging the board and piece
-        # If there are rows which are completely filled then remove those rows
-
-        # Declare empty row to add later
-        empty_row = [Air() for _ in range(BOARD_WIDTH)]
-        empty_row[0] = Edge()
-        empty_row[BOARD_WIDTH-1] = Edge()
-
-        # Declare a constant row that is completely filled
-        filled_row = [1]*BOARD_WIDTH
-
-        def filled(row):
-            return all(row) and not all([isinstance(x, Edge) for x in row])
-
-        # Count the total filled rows in the board
-        filled_rows = 0
-        for row in board:
-            if filled(row):
-                filled_rows += 1
-                board.remove(row)
-
-        # Add extra empty rows on the top of the board to compensate for deleted rows
-        for i in range(filled_rows):
-            board.insert(0, empty_row)
 
     def overlap_check(self, board):
         for row in range(self.height()):
@@ -183,7 +150,7 @@ class Piece(list):
         self.row += 1
         if not self.overlap_check(board):
             self.row -= 1
-            self.merge_board_and_piece(board)
+            board.merge_piece(self)
             return False
         return True
 
@@ -251,7 +218,8 @@ Z = Tetrimino(colours.red,
      [1, 1],
      [1, 0]])
 
-PIECES = [I,J,L,O,S,T,Z]
+#PIECES = [I,J,L,O,S,T,Z]
+PIECES = [O]
 
 # Constants for user input
 MOVE_LEFT = ['a', 'h']
@@ -278,6 +246,35 @@ class Board(list):
             for cell in row:
                 print cell.string(),
             print ""
+
+    def merge_piece(self, piece):
+        if piece.row == 0:
+            game_over()
+        for row in range(piece.height()):
+            for col in range(piece.width()):
+                self[piece.row+row][piece.col+col] = piece[row][col] or self[piece.row+row][piece.col+col]
+
+        self.remove_full_rows()
+
+    def remove_full_rows(self):
+        # TODO row object
+        empty_row = [Air() for _ in range(BOARD_WIDTH)]
+        empty_row[0] = Edge()
+        empty_row[BOARD_WIDTH-1] = Edge()
+
+        def filled(row):
+            return all(row) and not all([isinstance(x, Edge) for x in row])
+
+        filled_rows = []
+        for i, row in enumerate(self):
+            if filled(row):
+                filled_rows.append(i)
+
+        for i in reversed(filled_rows):
+            self.pop(i)
+
+        for _ in filled_rows:
+            self.insert(0, empty_row)
 
     def __init__(self):
         board = [[Air() for x in range(BOARD_WIDTH)] for y in range(BOARD_HEIGHT)]
