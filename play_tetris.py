@@ -10,13 +10,14 @@ logfile = open("tetris-log.txt","w")
 def log(msg):
     logfile.write(str(msg)+"\n")
 
+import copy
 import os
 import random
+import select
 import sys
-import copy
-
 import termios
-import fcntl
+import time
+import tty
 
 class colours:
     black = '\033[91m'
@@ -71,27 +72,21 @@ class Tile(Solid):
     def string(self):
         return self.colour+self.char+colours.ENDC
 
-import time
-
-import termios
-import select
-import sys
-import tty
-import os
-
 class Input(object):
 
     def next(self):
         select.select( [sys.__stdin__.fileno()], [], [], None)
         return os.read(sys.__stdin__.fileno(), 1)
 
-    def __enter__(self):
+    def __init__(self):
         self.original_stty = termios.tcgetattr(sys.__stdin__)
         tty.setcbreak(sys.__stdin__, termios.TCSANOW)
-        return self
 
-    def __exit__(self, type, value, traceback):
-        termios.tcsetattr(sys.__stdin__, termios.TCSANOW, self.original_stty)
+    def exit(self):
+        try:
+            termios.tcsetattr(sys.__stdin__, termios.TCSANOW, self.original_stty)
+        except:
+            pass
 
     def __iter__(self):
         return self
@@ -266,22 +261,21 @@ class Board(list):
 
     def draw(self, piece):
 
-        # TODO take snapshot of piece state so can't change while drawing
-        curr_piece = copy.deepcopy(piece)
-
         if self.drawing:
             return
-        else:
-            self.drawing = True
 
-        os.system('cls' if os.name=='nt' else 'clear')
-        
+        self.drawing = True
+
+        curr_piece = copy.deepcopy(piece)
+
         to_print = copy.deepcopy(self)
 
         for row in range(curr_piece.height()):
             for col in range(curr_piece.width()):
                 if curr_piece[row][col]:
                    to_print[curr_piece.row+row][curr_piece.col+col] = curr_piece[row][col]
+
+        os.system('cls' if os.name=='nt' else 'clear')
 
         for row in to_print:
             for cell in row:
@@ -358,6 +352,7 @@ class Game():
         return Piece(random.choice(PIECES))
 
     def quit(self, exit_val):
+        self.input_generator.exit()
         self.stopFlag.set()
         exit(exit_val)
 
@@ -370,6 +365,7 @@ class Game():
         self.stopFlag = Event()
         thread = MoveDown(self.stopFlag, self)
         thread.start()
+        self.input_generator = Input()
 
         self.actions = {
             MOVE_LEFT: lambda: self.curr_piece.move_left(self.board),
@@ -387,23 +383,21 @@ class Game():
         self.board.draw(self.curr_piece)
 
     def play(self):
-        self.game_loop()
         try:
             self.game_loop()
         except:
-            self.quit(1)
+            self.quit(0)
 
     def game_loop(self):
-        with Input() as input_generator:
-            while True:
+        while True:
 
-                self.board.draw(self.curr_piece)
+            self.board.draw(self.curr_piece)
 
-                key = input_generator.next()
+            key = self.input_generator.next()
 
-                player_move = player_moves[key]
+            player_move = player_moves[key]
 
-                self.actions.get(player_move, lambda: None)()
+            self.actions.get(player_move, lambda: None)()
 
 if __name__ == "__main__":
     game = Game()
