@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+initial_fall_rate = 0.5
+
 def game_over():
     print "Game over."
     exit(0)
@@ -235,7 +237,7 @@ class ROTATE_ANTICLOCKWISE(MOVE):
 class ROTATE_CLOCKWISE(MOVE):
     pass
 
-class NO_MOVE(MOVE):
+class MOVE_DOWN(MOVE):
     pass
 
 class QUIT_GAME(MOVE):
@@ -251,8 +253,8 @@ player_moves = {
     'e': ROTATE_CLOCKWISE,
     'k': ROTATE_CLOCKWISE,
     'i': ROTATE_CLOCKWISE,
-    's': NO_MOVE,
-    'j': NO_MOVE,
+    's': MOVE_DOWN,
+    'j': MOVE_DOWN,
     'q': QUIT_GAME,
 }
 
@@ -320,25 +322,61 @@ class Board(list):
     def width(self):
         return len(self[0])
 
+from threading import Thread, Event
+
+class MoveDown(Thread):
+    def __init__(self, event, game):
+        self.game = game
+
+        Thread.__init__(self)
+
+        self.stopped = event
+
+    def run(self):
+        while not self.stopped.wait(self.game.fall_rate):
+            self.game.move_down()
 
 class Game():
 
     def get_random_piece(self):
         return Piece(random.choice(PIECES))
 
+    def quit(self, exit_val):
+        self.stopFlag.set()
+        exit(exit_val)
+
     def __init__(self):
 
+        self.fall_rate = initial_fall_rate
         self.board = Board()
         self.curr_piece = self.get_random_piece()
+
+        self.stopFlag = Event()
+        thread = MoveDown(self.stopFlag, self)
+        thread.start()
+
         self.actions = {
             MOVE_LEFT: lambda: self.curr_piece.move_left(self.board),
             MOVE_RIGHT: lambda: self.curr_piece.move_right(self.board),
+            MOVE_DOWN: lambda: self.curr_piece.move_down(self.board),
             ROTATE_ANTICLOCKWISE: lambda: self.curr_piece.rotate(3, self.board),
             ROTATE_CLOCKWISE: lambda: self.curr_piece.rotate(1, self.board),
-            QUIT_GAME: lambda: sys.exit(0),
+            QUIT_GAME: lambda: self.quit(0),
         }
 
+    def move_down(self):
+        if not self.curr_piece.move_down(self.board):
+            del self.curr_piece
+            self.curr_piece = self.get_random_piece()
+        self.board.draw(self.curr_piece)
+
     def play(self):
+        try:
+            self.game_loop()
+        except:
+            self.quit(1)
+
+    def game_loop(self):
 
         while True:
 
@@ -349,10 +387,6 @@ class Game():
             move_down = lambda: None
             player_move = player_moves[player_move]
             self.actions.get(player_move, move_down)()
-
-            if not self.curr_piece.move_down(self.board):
-                del self.curr_piece
-                self.curr_piece = self.get_random_piece()
 
 if __name__ == "__main__":
     game = Game()
