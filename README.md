@@ -1,10 +1,13 @@
 # Terminal-Tetris
 
-Instructions to run:
---------------------
+An implementation of Tetris in python that runs in the terminal.
 
- - Fire up the terminal
- - cd to the directory where play_tetris.py is located
- - run `python play_tetris.py`
- - Follow on screen instructions to play the game
+## Requirements
 
+Requires python only.
+
+## Run
+
+    python play_tetris.py
+
+Use `wasd` or `hjlk` (vi style) to move the pieces.
