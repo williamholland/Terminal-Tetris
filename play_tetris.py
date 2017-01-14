@@ -71,27 +71,13 @@ class Tile(Solid):
     def string(self):
         return self.colour+self.char+colours.ENDC
 
+import time
+from curtsies import Input
+
 def getch():
-  fd = sys.stdin.fileno()
 
-  oldterm = termios.tcgetattr(fd)
-  newattr = termios.tcgetattr(fd)
-  newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
-  termios.tcsetattr(fd, termios.TCSANOW, newattr)
-
-  oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
-  fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
-
-  try:
-    while 1:
-      try:
-        c = sys.stdin.read(1)
-        break
-      except IOError: pass
-  finally:
-    termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
-    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
-  return c
+    with Input(keynames='curses') as input_generator:
+        return input_generator.next()
 
 # DECLARE ALL THE CONSTANTS
 BOARD_WIDTH = 12
@@ -391,15 +377,16 @@ class Game():
 
     def game_loop(self):
 
+        null_move = lambda: None
+
         while True:
 
             self.board.draw(self.curr_piece)
 
             player_move = getch()
 
-            move_down = lambda: None
             player_move = player_moves[player_move]
-            self.actions.get(player_move, move_down)()
+            self.actions.get(player_move, null_move)()
 
 if __name__ == "__main__":
     game = Game()
