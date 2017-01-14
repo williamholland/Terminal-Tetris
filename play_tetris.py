@@ -218,16 +218,43 @@ Z = Tetrimino(colours.red,
      [1, 1],
      [1, 0]])
 
-#PIECES = [I,J,L,O,S,T,Z]
-PIECES = [O]
+PIECES = [I,J,L,O,S,T,Z]
 
-# Constants for user input
-MOVE_LEFT = ['a', 'h']
-MOVE_RIGHT = ['d', 'l']
-ROTATE_ANTICLOCKWISE = ['w', ' ']
-ROTATE_CLOCKWISE = ['e', 'k', 'i']
-NO_MOVE = ['s', 'j']
-QUIT_GAME = ['q']
+class MOVE():
+    pass
+
+class MOVE_LEFT(MOVE):
+    pass
+
+class MOVE_RIGHT(MOVE):
+    pass
+
+class ROTATE_ANTICLOCKWISE(MOVE):
+    pass
+
+class ROTATE_CLOCKWISE(MOVE):
+    pass
+
+class NO_MOVE(MOVE):
+    pass
+
+class QUIT_GAME(MOVE):
+    pass
+
+player_moves = {
+    'a': MOVE_LEFT,
+    'h': MOVE_LEFT,
+    'd': MOVE_RIGHT,
+    'l': MOVE_RIGHT,
+    'w': ROTATE_ANTICLOCKWISE,
+    ' ': ROTATE_ANTICLOCKWISE,
+    'e': ROTATE_CLOCKWISE,
+    'k': ROTATE_CLOCKWISE,
+    'i': ROTATE_CLOCKWISE,
+    's': NO_MOVE,
+    'j': NO_MOVE,
+    'q': QUIT_GAME,
+}
 
 class Board(list):
 
@@ -294,41 +321,39 @@ class Board(list):
         return len(self[0])
 
 
-def get_random_piece():
-    return Piece(random.choice(PIECES))
+class Game():
 
+    def get_random_piece(self):
+        return Piece(random.choice(PIECES))
 
-def play_game():
-    # Initialize the game board, piece and piece position
-    board = Board()
-    curr_piece = get_random_piece()
-    piece_pos = curr_piece.position()
-    board.draw(curr_piece)
+    def __init__(self):
 
-    # Get player move from STDIN
-    player_move = getch()
-    while True:
+        self.board = Board()
+        self.curr_piece = self.get_random_piece()
+        self.actions = {
+            MOVE_LEFT: lambda: self.curr_piece.move_left(self.board),
+            MOVE_RIGHT: lambda: self.curr_piece.move_right(self.board),
+            ROTATE_ANTICLOCKWISE: lambda: self.curr_piece.rotate(3, self.board),
+            ROTATE_CLOCKWISE: lambda: self.curr_piece.rotate(1, self.board),
+            QUIT_GAME: lambda: sys.exit(0),
+        }
 
-        if player_move in MOVE_LEFT:
-            curr_piece.move_left(board)
-        elif player_move in MOVE_RIGHT:
-            curr_piece.move_right(board)
-        elif player_move in ROTATE_ANTICLOCKWISE:
-            curr_piece.rotate(3, board)
-        elif player_move in ROTATE_CLOCKWISE:
-            curr_piece.rotate(1, board)
-        elif player_move in QUIT_GAME:
-            sys.exit(0)
+    def play(self):
 
-        if not curr_piece.move_down(board):
-            del curr_piece
-            curr_piece = get_random_piece()
+        while True:
 
-        # Redraw board
-        board.draw(curr_piece)
+            self.board.draw(self.curr_piece)
 
-        # Get player move from STDIN
-        player_move = getch()
+            player_move = getch()
+
+            move_down = lambda: None
+            player_move = player_moves[player_move]
+            self.actions.get(player_move, move_down)()
+
+            if not self.curr_piece.move_down(self.board):
+                del self.curr_piece
+                self.curr_piece = self.get_random_piece()
 
 if __name__ == "__main__":
-    play_game()
+    game = Game()
+    game.play()
