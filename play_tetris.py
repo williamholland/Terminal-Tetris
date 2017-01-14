@@ -149,16 +149,22 @@ class Piece(list):
         return True
 
     def move_left(self, board):
+        if self.frozen:
+            return
         self.col -= 1
         if not self.overlap_check(board):
             self.col += 1
 
     def move_right(self, board):
+        if self.frozen:
+            return
         self.col += 1
         if not self.overlap_check(board):
             self.col -= 1
 
     def move_down(self, board):
+        if self.frozen:
+            return
         self.row += 1
         if not self.overlap_check(board):
             self.row -= 1
@@ -167,6 +173,8 @@ class Piece(list):
         return True
 
     def rotate_clockwise(self):
+        if self.frozen:
+            return
         rows = []
 
         while self:
@@ -176,6 +184,8 @@ class Piece(list):
             self.append(row)
 
     def rotate(self, n, board):
+        if self.frozen:
+            return
         n = n % 4
         for _ in range(n):
             self.rotate_clockwise()
@@ -185,6 +195,7 @@ class Piece(list):
 
     def __init__(self, tetrimino):
 
+        self.frozen = False
         self.colour = tetrimino.colour
 
         for i in [[self.tilize(col) for col in row] for row in tetrimino]:
@@ -296,6 +307,9 @@ class Board(list):
         self.drawing = False
 
     def merge_piece(self, piece):
+
+        piece.frozen = True
+
         if piece.row == 0:
             game_over()
         for row in range(piece.height()):
