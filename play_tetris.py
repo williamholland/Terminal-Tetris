@@ -13,6 +13,7 @@ def log(msg):
 import os
 import random
 import sys
+import copy
 
 import termios
 import fcntl
@@ -260,7 +261,10 @@ player_moves = {
 
 class Board(list):
 
-    def draw(self, curr_piece):
+    def draw(self, piece):
+
+        # TODO take snapshot of piece state so can't change while drawing
+        curr_piece = copy.deepcopy(piece)
 
         if self.drawing:
             return
@@ -269,7 +273,6 @@ class Board(list):
 
         os.system('cls' if os.name=='nt' else 'clear')
         
-        import copy
         to_print = copy.deepcopy(self)
 
         for row in range(curr_piece.height()):
