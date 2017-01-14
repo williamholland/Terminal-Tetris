@@ -72,12 +72,29 @@ class Tile(Solid):
         return self.colour+self.char+colours.ENDC
 
 import time
-from curtsies import Input
 
-def getch():
+import termios
+import select
+import sys
+import tty
+import os
 
-    with Input(keynames='curses') as input_generator:
-        return input_generator.next()
+class Input(object):
+
+    def next(self):
+        select.select( [sys.__stdin__.fileno()], [], [], None)
+        return os.read(sys.__stdin__.fileno(), 1)
+
+    def __enter__(self):
+        self.original_stty = termios.tcgetattr(sys.__stdin__)
+        tty.setcbreak(sys.__stdin__, termios.TCSANOW)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        termios.tcsetattr(sys.__stdin__, termios.TCSANOW, self.original_stty)
+
+    def __iter__(self):
+        return self
 
 # DECLARE ALL THE CONSTANTS
 BOARD_WIDTH = 12
@@ -370,23 +387,23 @@ class Game():
         self.board.draw(self.curr_piece)
 
     def play(self):
+        self.game_loop()
         try:
             self.game_loop()
         except:
             self.quit(1)
 
     def game_loop(self):
+        with Input() as input_generator:
+            while True:
 
-        null_move = lambda: None
+                self.board.draw(self.curr_piece)
 
-        while True:
+                key = input_generator.next()
 
-            self.board.draw(self.curr_piece)
+                player_move = player_moves[key]
 
-            player_move = getch()
-
-            player_move = player_moves[player_move]
-            self.actions.get(player_move, null_move)()
+                self.actions.get(player_move, lambda: None)()
 
 if __name__ == "__main__":
     game = Game()
