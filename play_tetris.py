@@ -116,6 +116,17 @@ class Tetrimino(list):
 
 class Piece(list):
 
+    def disp(self):
+        to_return = ''
+        for row in self:
+            for col in row:
+                if col:
+                    to_return+='#'
+                else:
+                    to_return+=' '
+            to_return+='\n'
+        return to_return
+
     def tilize(self, val):
         if val:
             return Tile(self.colour)
