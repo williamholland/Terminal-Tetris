@@ -261,6 +261,12 @@ player_moves = {
 class Board(list):
 
     def draw(self, curr_piece):
+
+        if self.drawing:
+            return
+        else:
+            self.drawing = True
+
         os.system('cls' if os.name=='nt' else 'clear')
         
         import copy
@@ -275,6 +281,8 @@ class Board(list):
             for cell in row:
                 print cell.string(),
             print ""
+
+        self.drawing = False
 
     def merge_piece(self, piece):
         if piece.row == 0:
@@ -306,6 +314,8 @@ class Board(list):
             self.insert(0, empty_row)
 
     def __init__(self):
+        self.drawing = False
+
         board = [[Air() for x in range(BOARD_WIDTH)] for y in range(BOARD_HEIGHT)]
         for i in range(BOARD_HEIGHT):
             board[i][0] = Edge()
