@@ -312,9 +312,12 @@ class Board(list):
 
         if piece.row == 0:
             game_over()
+
         for row in range(piece.height()):
             for col in range(piece.width()):
                 self[piece.row+row][piece.col+col] = piece[row][col] or self[piece.row+row][piece.col+col]
+
+        del piece
 
         self.remove_full_rows()
 
@@ -403,7 +406,6 @@ class Game():
 
     def move_down(self):
         if not self.curr_piece.move_down(self.board):
-            del self.curr_piece
             self.curr_piece = self.get_random_piece()
         self.board.draw(self.curr_piece)
 
