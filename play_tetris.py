@@ -6,6 +6,10 @@ def game_over():
     print "Game over."
     exit(0)
 
+import locale
+
+locale.setlocale(locale.LC_ALL, '')
+
 logfile = open("tetris-log.txt","w")
 def log(msg):
     logfile.write(str(msg)+"\n")
@@ -18,21 +22,34 @@ import sys
 import termios
 import time
 import tty
+import curses
 
 class colours:
-    black = '\033[91m'
-    red = '\033[91m'
-    green = '\033[92m'
-    yellow = '\033[93m'
-    dark_yellow = '\033[0;33m'
-    blue = '\033[94m'
-    magenta = '\033[95m'
-    cyan = '\033[96m'
-    white = '\033[97m'
-    ENDC = '\033[0m'
+    black = 90
+    red = 1
+    green = 2
+    yellow = 3
+    dark_yellow = 4
+    blue = 5
+    magenta = 6
+    cyan = 7
+    white = 8
 
-class Air():
+class Cell():
+
+    def draw(self, screen, x, y):
+        width = 2
+        if self.colour == 3:
+            colour = curses.color_pair(self.colour) | curses.A_BOLD
+        else:
+            colour = curses.color_pair(self.colour)
+        screen.addstr(y, x * width, self.string(), colour)
+
+class Air(Cell):
     char = " "
+
+    def __init__(self):
+        self.colour = colours.white
 
     def __nonzero__(self):
         return False
@@ -41,9 +58,10 @@ class Air():
         return "Air"
 
     def string(self):
-        return self.char
+        #return self.char
+        return "  "
 
-class Solid():
+class Solid(Cell):
     char = u"\u2588".encode('utf-8')
 
     def __nonzero__(self):
@@ -53,10 +71,13 @@ class Solid():
         return "Solid"
 
     def string(self):
-        return self.char
+        return " %s" % self.char
 
 class Edge(Solid):
     char = u"\u2588".encode('utf-8')
+
+    def __init__(self):
+        self.colour = colours.white
 
     def __str__(self):
         return "Edge"
@@ -69,8 +90,8 @@ class Tile(Solid):
     def __str__(self):
         return "Tile"
 
-    def string(self):
-        return self.colour+self.char+colours.ENDC
+    #def string(self):
+        #return self.colour+self.char+colours.ENDC
 
 class Input(object):
 
@@ -115,6 +136,15 @@ class Tetrimino(list):
             self.append(i)
 
 class Piece(list):
+
+    def draw(self, screen):
+        for row in range(self.height()):
+            for col in range(self.width()):
+                cell = self[row][col]
+                if cell:
+                    y = self.row+row
+                    x = self.col+col
+                    cell.draw(screen, x, y)
 
     def disp(self):
         to_return = ''
@@ -283,33 +313,21 @@ class Board(list):
 
     def draw(self, piece):
 
-        if self.drawing:
-            return
+        # draw board
+        for y, row in enumerate(self):
+            for x, cell in enumerate(row):
+                cell.draw(self.screen, x, y)
 
-        self.drawing = True
+        #. draw piece
+        piece.draw(self.screen)
 
-        curr_piece = copy.deepcopy(piece)
-
-        to_print = copy.deepcopy(self)
-
-        for row in range(curr_piece.height()):
-            for col in range(curr_piece.width()):
-                if curr_piece[row][col]:
-                   to_print[curr_piece.row+row][curr_piece.col+col] = curr_piece[row][col]
-
-        os.system('cls' if os.name=='nt' else 'clear')
-
-        for row in to_print:
-            for cell in row:
-                print cell.string(),
-            print ""
-
-        self.drawing = False
+        self.screen.refresh()
 
     def merge_piece(self, piece):
 
         piece.frozen = True
 
+        log("here")
         if piece.row == 0:
             game_over()
 
@@ -342,7 +360,20 @@ class Board(list):
             self.insert(0, empty_row)
 
     def __init__(self):
-        self.drawing = False
+
+        self.screen = curses.initscr()
+
+        curses.curs_set(0)
+
+        curses.start_color() 
+        curses.init_pair(1,curses.COLOR_RED,curses.COLOR_BLACK) 
+        curses.init_pair(2,curses.COLOR_GREEN,curses.COLOR_BLACK) 
+        curses.init_pair(3,curses.COLOR_YELLOW,curses.COLOR_BLACK) 
+        curses.init_pair(4,curses.COLOR_YELLOW,curses.COLOR_BLACK) 
+        curses.init_pair(5,curses.COLOR_BLUE,curses.COLOR_BLACK) 
+        curses.init_pair(6,curses.COLOR_MAGENTA,curses.COLOR_BLACK) 
+        curses.init_pair(7,curses.COLOR_CYAN,curses.COLOR_BLACK) 
+        curses.init_pair(8,curses.COLOR_WHITE,curses.COLOR_BLACK) 
 
         board = [[Air() for x in range(BOARD_WIDTH)] for y in range(BOARD_HEIGHT)]
         for i in range(BOARD_HEIGHT):
@@ -382,6 +413,7 @@ class Game():
     def quit(self, exit_val):
         self.input_generator.exit()
         self.stopFlag.set()
+        curses.curs_set(1)
         exit(exit_val)
 
     def __init__(self):
@@ -410,6 +442,7 @@ class Game():
         self.board.draw(self.curr_piece)
 
     def play(self):
+        self.game_loop()
         try:
             self.game_loop()
         except:
