@@ -309,6 +309,30 @@ player_moves = {
     'q': QUIT_GAME,
 }
 
+class Curses():
+    def __enter__(self):
+
+        screen = curses.initscr()
+
+        curses.curs_set(0)
+
+        curses.start_color()
+
+        curses.init_pair(1,curses.COLOR_RED,curses.COLOR_BLACK)
+        curses.init_pair(2,curses.COLOR_GREEN,curses.COLOR_BLACK)
+        curses.init_pair(3,curses.COLOR_YELLOW,curses.COLOR_BLACK)
+        curses.init_pair(4,curses.COLOR_YELLOW,curses.COLOR_BLACK)
+        curses.init_pair(5,curses.COLOR_BLUE,curses.COLOR_BLACK)
+        curses.init_pair(6,curses.COLOR_MAGENTA,curses.COLOR_BLACK)
+        curses.init_pair(7,curses.COLOR_CYAN,curses.COLOR_BLACK)
+        curses.init_pair(8,curses.COLOR_WHITE,curses.COLOR_BLACK)
+
+        return screen
+
+    def __exit__(self, type, value, traceback):
+        os.system('clear')
+        curses.endwin()
+
 class Board(list):
 
     def draw(self, piece):
@@ -359,21 +383,9 @@ class Board(list):
         for _ in filled_rows:
             self.insert(0, empty_row)
 
-    def __init__(self):
+    def __init__(self, screen):
 
-        self.screen = curses.initscr()
-
-        curses.curs_set(0)
-
-        curses.start_color() 
-        curses.init_pair(1,curses.COLOR_RED,curses.COLOR_BLACK) 
-        curses.init_pair(2,curses.COLOR_GREEN,curses.COLOR_BLACK) 
-        curses.init_pair(3,curses.COLOR_YELLOW,curses.COLOR_BLACK) 
-        curses.init_pair(4,curses.COLOR_YELLOW,curses.COLOR_BLACK) 
-        curses.init_pair(5,curses.COLOR_BLUE,curses.COLOR_BLACK) 
-        curses.init_pair(6,curses.COLOR_MAGENTA,curses.COLOR_BLACK) 
-        curses.init_pair(7,curses.COLOR_CYAN,curses.COLOR_BLACK) 
-        curses.init_pair(8,curses.COLOR_WHITE,curses.COLOR_BLACK) 
+        self.screen = screen
 
         board = [[Air() for x in range(BOARD_WIDTH)] for y in range(BOARD_HEIGHT)]
         for i in range(BOARD_HEIGHT):
@@ -416,10 +428,10 @@ class Game():
         curses.curs_set(1)
         exit(exit_val)
 
-    def __init__(self):
+    def __init__(self, screen):
 
         self.fall_rate = initial_fall_rate
-        self.board = Board()
+        self.board = Board(screen)
         self.curr_piece = self.get_random_piece()
 
         self.stopFlag = Event()
@@ -460,5 +472,6 @@ class Game():
             self.actions.get(player_move, lambda: None)()
 
 if __name__ == "__main__":
-    game = Game()
-    game.play()
+    with Curses() as screen:
+        game = Game(screen)
+        game.play()
