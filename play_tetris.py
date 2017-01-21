@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 initial_fall_rate = 0.5
+level = 0
 
 def game_over():
     print "Game over."
@@ -34,6 +35,29 @@ class colours:
     magenta = 6
     cyan = 7
     white = 8
+
+class Score():
+
+    def __init__(self):
+        self.row = 1
+        width = 2
+        self.col = 13 * width
+        self.score = 0
+
+    def single_row(self):
+        self.score += 40 * (level + 1)
+
+    def double_row(self):
+        self.score += 100 * (level + 1)
+
+    def triple_row(self):
+        self.score += 300 * (level + 1)
+
+    def quad_row(self):
+        self.score += 1200 * (level + 1)
+
+    def draw(self, screen):
+        screen.addstr(self.row, self.col, str(self.score))
 
 class Cell():
 
@@ -345,6 +369,9 @@ class Board(list):
         #. draw piece
         piece.draw(self.screen)
 
+        #. draw score
+        self.score.draw(self.screen)
+
         self.screen.refresh()
 
     def merge_piece(self, piece):
@@ -377,6 +404,15 @@ class Board(list):
             if filled(row):
                 filled_rows.append(i)
 
+        if len(filled_rows) == 1:
+            self.score.single_row()
+        elif len(filled_rows) == 2:
+            self.score.double_row()
+        elif len(filled_rows) == 3:
+            self.score.triple_row()
+        elif len(filled_rows) == 4:
+            self.score.quad_row()
+
         for i in reversed(filled_rows):
             self.pop(i)
 
@@ -386,6 +422,7 @@ class Board(list):
     def __init__(self, screen):
 
         self.screen = screen
+        self.score = Score()
 
         board = [[Air() for x in range(BOARD_WIDTH)] for y in range(BOARD_HEIGHT)]
         for i in range(BOARD_HEIGHT):
