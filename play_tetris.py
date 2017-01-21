@@ -5,7 +5,7 @@ level = 0
 
 def game_over():
     print "Game over."
-    exit(0)
+    game.quit(0)
 
 import locale
 
@@ -24,6 +24,12 @@ import termios
 import time
 import tty
 import curses
+
+from curses import KEY_UP
+from curses import KEY_DOWN
+from curses import KEY_LEFT
+from curses import KEY_RIGHT
+KEY_ESC = 27
 
 class colours:
     black = 90
@@ -117,21 +123,19 @@ class Tile(Solid):
     #def string(self):
         #return self.colour+self.char+colours.ENDC
 
-class Input(object):
+class Input():
+
+    def __init__(self, screen):
+        self.screen = screen
 
     def next(self):
-        select.select( [sys.__stdin__.fileno()], [], [], None)
-        return os.read(sys.__stdin__.fileno(), 1)
-
-    def __init__(self):
-        self.original_stty = termios.tcgetattr(sys.__stdin__)
-        tty.setcbreak(sys.__stdin__, termios.TCSANOW)
-
-    def exit(self):
+        event = self.screen.getch()
+        if event == 27:
+            return KEY_ESC
         try:
-            termios.tcsetattr(sys.__stdin__, termios.TCSANOW, self.original_stty)
+            return chr(event)
         except:
-            pass
+            return event
 
     def __iter__(self):
         return self
@@ -321,16 +325,21 @@ class QUIT_GAME(MOVE):
 player_moves = {
     'a': MOVE_LEFT,
     'h': MOVE_LEFT,
+    KEY_LEFT: MOVE_LEFT,
     'd': MOVE_RIGHT,
     'l': MOVE_RIGHT,
+    KEY_RIGHT: MOVE_RIGHT,
     'w': ROTATE_ANTICLOCKWISE,
     ' ': ROTATE_ANTICLOCKWISE,
     'e': ROTATE_CLOCKWISE,
     'k': ROTATE_CLOCKWISE,
     'i': ROTATE_CLOCKWISE,
+    KEY_UP: ROTATE_CLOCKWISE,
     's': MOVE_DOWN,
     'j': MOVE_DOWN,
+    KEY_DOWN: MOVE_DOWN,
     'q': QUIT_GAME,
+    KEY_ESC: QUIT_GAME,
 }
 
 class Curses():
@@ -338,6 +347,8 @@ class Curses():
 
         screen = curses.initscr()
 
+        curses.noecho()
+        screen.keypad(1)
         curses.curs_set(0)
 
         curses.start_color()
@@ -460,9 +471,7 @@ class Game():
         return Piece(random.choice(PIECES))
 
     def quit(self, exit_val):
-        self.input_generator.exit()
         self.stopFlag.set()
-        curses.curs_set(1)
         exit(exit_val)
 
     def __init__(self, screen):
@@ -474,7 +483,7 @@ class Game():
         self.stopFlag = Event()
         thread = MoveDown(self.stopFlag, self)
         thread.start()
-        self.input_generator = Input()
+        self.input_generator = Input(screen)
 
         self.actions = {
             MOVE_LEFT: lambda: self.curr_piece.move_left(self.board),
@@ -504,7 +513,7 @@ class Game():
 
             key = self.input_generator.next()
 
-            player_move = player_moves[key]
+            player_move = player_moves.get(key, None)
 
             self.actions.get(player_move, lambda: None)()
 
