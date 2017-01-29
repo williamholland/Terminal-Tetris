@@ -134,7 +134,7 @@ class Input():
             return KEY_ESC
         try:
             return chr(event)
-        except:
+        except ValueError:
             return event
 
     def __iter__(self):
@@ -500,7 +500,6 @@ class Game():
         self.board.draw(self.curr_piece)
 
     def play(self):
-        self.game_loop()
         try:
             self.game_loop()
         except:
